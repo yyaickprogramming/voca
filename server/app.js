@@ -3,9 +3,8 @@ require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const session = require('express-session');
-const pgSessionFactory = require('connect-pg-simple');
 
-const { pool } = require('./db');
+const db = require('./db');
 const { initializeDatabase } = require('./initDb');
 const statsRoutes = require('./routes/stats');
 const authRoutes = require('./routes/auth');
@@ -17,15 +16,6 @@ const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 const isProduction = process.env.NODE_ENV === 'production';
 const sessionSecret = process.env.SESSION_SECRET || 'my_secret_key';
-const PgSessionStore = pgSessionFactory(session);
-const sessionTableName = process.env.SESSION_TABLE_NAME || 'user_sessions';
-const sessionPruneInterval = Number(process.env.SESSION_PRUNE_INTERVAL_SECONDS) || 900;
-const sessionStore = new PgSessionStore({
-  pool,
-  tableName: sessionTableName,
-  createTableIfMissing: true,
-  pruneSessionInterval: sessionPruneInterval
-});
 
 app.set('trust proxy', 1);
 
@@ -34,7 +24,6 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use(session({
   name: 'voca.sid',
-  store: sessionStore,
   secret: sessionSecret,
   resave: false,
   saveUninitialized: false,
@@ -94,20 +83,29 @@ async function startServer() {
 
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`Сервер запущен: http://localhost:${PORT}`);
+    console.log(`SQLite база: ${db.path}`);
   });
 }
 
 startServer().catch((error) => {
-  console.error('Не удалось запустить сервер:', error.message);
+  console.error('Не удалось запустить сервер:', error && error.message ? error.message : error);
   process.exit(1);
 });
 
-process.on('SIGTERM', async () => {
-  await sessionStore.close();
-  process.exit(0);
+async function shutdown(signal) {
+  try {
+    await db.close();
+  } catch (error) {
+    console.error(`Ошибка при закрытии базы после ${signal}:`, error.message);
+  } finally {
+    process.exit(0);
+  }
+}
+
+process.on('SIGTERM', () => {
+  shutdown('SIGTERM');
 });
 
-process.on('SIGINT', async () => {
-  await sessionStore.close();
-  process.exit(0);
+process.on('SIGINT', () => {
+  shutdown('SIGINT');
 });

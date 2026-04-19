@@ -28,27 +28,27 @@ router.post('/register', async (req, res) => {
   }
 
   try {
-    const existingUser = await db.query(
-      'SELECT id FROM users WHERE lower(trim(username)) = $1',
+    const existingUser = await db.get(
+      'SELECT id FROM users WHERE lower(trim(username)) = ?',
       [normalizeUsername(username)]
     );
 
-    if (existingUser.rows[0]) {
+    if (existingUser) {
       return res.status(400).json({ message: 'Этот логин уже занят' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const createdUser = await db.query(
-      'INSERT INTO users (username, password) VALUES ($1, $2) RETURNING id, username',
+    const result = await db.run(
+      'INSERT INTO users (username, password) VALUES (?, ?)',
       [username, hashedPassword]
     );
 
-    req.session.userId = createdUser.rows[0].id;
-    req.session.username = createdUser.rows[0].username;
+    req.session.userId = result.id;
+    req.session.username = username;
 
     res.json({ message: 'Регистрация успешна' });
   } catch (error) {
-    if (error.code === '23505') {
+    if (error.message && error.message.includes('idx_users_username_normalized')) {
       return res.status(400).json({ message: 'Этот логин уже занят' });
     }
 
@@ -65,12 +65,10 @@ router.post('/login', async (req, res) => {
   }
 
   try {
-    const result = await db.query(
-      'SELECT * FROM users WHERE lower(trim(username)) = $1',
+    const user = await db.get(
+      'SELECT * FROM users WHERE lower(trim(username)) = ?',
       [normalizeUsername(username)]
     );
-
-    const user = result.rows[0];
 
     if (!user) {
       return res.status(400).json({ message: 'Пользователь не найден' });

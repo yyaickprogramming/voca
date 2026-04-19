@@ -8,12 +8,15 @@ router.get('/', authMiddleware, async (req, res) => {
   const userId = req.session.userId;
 
   try {
-    const result = await db.query(
-      'SELECT * FROM tasks WHERE user_id = $1 ORDER BY id DESC',
+    const tasks = await db.all(
+      'SELECT * FROM tasks WHERE user_id = ? ORDER BY id DESC',
       [userId]
     );
 
-    res.json(result.rows);
+    res.json(tasks.map((task) => ({
+      ...task,
+      completed: Boolean(task.completed)
+    })));
   } catch (error) {
     res.status(500).json({ message: 'Ошибка сервера' });
   }
@@ -28,8 +31,8 @@ router.post('/create', authMiddleware, async (req, res) => {
   }
 
   try {
-    await db.query(
-      'INSERT INTO tasks (user_id, text) VALUES ($1, $2)',
+    await db.run(
+      'INSERT INTO tasks (user_id, text) VALUES (?, ?)',
       [userId, text]
     );
 
@@ -44,12 +47,12 @@ router.post('/delete', authMiddleware, async (req, res) => {
   const userId = req.session.userId;
 
   try {
-    const result = await db.query(
-      'DELETE FROM tasks WHERE id = $1 AND user_id = $2',
+    const result = await db.run(
+      'DELETE FROM tasks WHERE id = ? AND user_id = ?',
       [id, userId]
     );
 
-    if (result.rowCount === 0) {
+    if (result.changes === 0) {
       return res.status(404).json({ message: 'Задача не найдена' });
     }
 
@@ -64,17 +67,16 @@ router.post('/toggle', authMiddleware, async (req, res) => {
   const userId = req.session.userId;
 
   try {
-    const result = await db.query(
+    const result = await db.run(
       `
         UPDATE tasks
-        SET completed = NOT completed
-        WHERE id = $1 AND user_id = $2
-        RETURNING completed
+        SET completed = CASE completed WHEN 1 THEN 0 ELSE 1 END
+        WHERE id = ? AND user_id = ?
       `,
       [id, userId]
     );
 
-    if (result.rowCount === 0) {
+    if (result.changes === 0) {
       return res.status(404).json({ message: 'Задача не найдена' });
     }
 

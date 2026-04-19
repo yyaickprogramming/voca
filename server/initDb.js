@@ -396,17 +396,15 @@ const generatedIdeas = generatedAudienceConfigs.flatMap((audienceConfig) =>
 const allIdeas = [...ideas, ...generatedIdeas];
 
 async function createTables() {
-  await db.query(`
+  await db.exec(`
     CREATE TABLE IF NOT EXISTS users (
-      id SERIAL PRIMARY KEY,
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
       username TEXT NOT NULL,
       password TEXT NOT NULL
-    )
-  `);
+    );
 
-  await db.query(`
     CREATE TABLE IF NOT EXISTS ideas (
-      id SERIAL PRIMARY KEY,
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
       title TEXT NOT NULL,
       description TEXT NOT NULL,
       pitch TEXT NOT NULL DEFAULT '',
@@ -418,60 +416,59 @@ async function createTables() {
       cost TEXT NOT NULL,
       difficulty TEXT NOT NULL,
       relevance TEXT NOT NULL
-    )
-  `);
+    );
 
-  await db.query(`
     CREATE TABLE IF NOT EXISTS user_ideas (
-      id SERIAL PRIMARY KEY,
-      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      idea_id INTEGER NOT NULL REFERENCES ideas(id) ON DELETE CASCADE,
-      is_main BOOLEAN DEFAULT FALSE
-    )
-  `);
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      idea_id INTEGER NOT NULL,
+      is_main INTEGER NOT NULL DEFAULT 0,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (idea_id) REFERENCES ideas(id) ON DELETE CASCADE
+    );
 
-  await db.query(`
     CREATE TABLE IF NOT EXISTS tasks (
-      id SERIAL PRIMARY KEY,
-      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
       text TEXT NOT NULL,
-      completed BOOLEAN DEFAULT FALSE
-    )
+      completed INTEGER NOT NULL DEFAULT 0,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
   `);
 
-  console.log('Таблицы PostgreSQL созданы или уже существуют.');
+  console.log('Таблицы SQLite созданы или уже существуют.');
 }
 
 async function ensureIdeasConstraints() {
-  await db.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_ideas_title ON ideas(title)');
+  await db.run('CREATE UNIQUE INDEX IF NOT EXISTS idx_ideas_title ON ideas(title)');
 }
 
 async function ensureUserIdeasConstraints() {
-  await db.query(`
-    WITH ranked AS (
-      SELECT id, ROW_NUMBER() OVER (PARTITION BY user_id, idea_id ORDER BY id) AS rn
-      FROM user_ideas
-    )
+  await db.run(`
     DELETE FROM user_ideas
-    WHERE id IN (SELECT id FROM ranked WHERE rn > 1)
+    WHERE id NOT IN (
+      SELECT MIN(id)
+      FROM user_ideas
+      GROUP BY user_id, idea_id
+    )
   `);
 
-  await db.query(
+  await db.run(
     'CREATE UNIQUE INDEX IF NOT EXISTS idx_user_ideas_unique ON user_ideas(user_id, idea_id)'
   );
 }
 
 async function ensureUsersConstraints() {
-  await db.query(`
-    WITH ranked AS (
-      SELECT id, ROW_NUMBER() OVER (PARTITION BY lower(trim(username)) ORDER BY id) AS rn
-      FROM users
-    )
+  await db.run(`
     DELETE FROM users
-    WHERE id IN (SELECT id FROM ranked WHERE rn > 1)
+    WHERE id NOT IN (
+      SELECT MIN(id)
+      FROM users
+      GROUP BY lower(trim(username))
+    )
   `);
 
-  await db.query(
+  await db.run(
     'CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username_normalized ON users(lower(trim(username)))'
   );
 }
@@ -480,23 +477,23 @@ async function seedIdeas() {
   console.log('Обновляем идеи в базе...');
 
   for (const idea of allIdeas) {
-    await db.query(
+    await db.run(
       `
         INSERT INTO ideas
           (title, description, pitch, why_now, first_steps, audience, risks, income, cost, difficulty, relevance)
         VALUES
-          ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-        ON CONFLICT (title) DO UPDATE SET
-          description = EXCLUDED.description,
-          pitch = EXCLUDED.pitch,
-          why_now = EXCLUDED.why_now,
-          first_steps = EXCLUDED.first_steps,
-          audience = EXCLUDED.audience,
-          risks = EXCLUDED.risks,
-          income = EXCLUDED.income,
-          cost = EXCLUDED.cost,
-          difficulty = EXCLUDED.difficulty,
-          relevance = EXCLUDED.relevance
+          (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(title) DO UPDATE SET
+          description = excluded.description,
+          pitch = excluded.pitch,
+          why_now = excluded.why_now,
+          first_steps = excluded.first_steps,
+          audience = excluded.audience,
+          risks = excluded.risks,
+          income = excluded.income,
+          cost = excluded.cost,
+          difficulty = excluded.difficulty,
+          relevance = excluded.relevance
       `,
       [
         idea.title,

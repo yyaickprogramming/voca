@@ -8,17 +8,25 @@ router.get('/', authMiddleware, async (req, res) => {
   const userId = req.session.userId;
 
   try {
-    const result = await db.query(
-      `
-        SELECT
-          (SELECT COUNT(*)::int FROM user_ideas WHERE user_id = $1) AS "savedIdeas",
-          (SELECT COUNT(*)::int FROM tasks WHERE user_id = $1) AS tasks,
-          (SELECT COUNT(*)::int FROM tasks WHERE user_id = $1 AND completed = TRUE) AS "completedTasks"
-      `,
+    const savedIdeasRow = await db.get(
+      'SELECT COUNT(*) AS count FROM user_ideas WHERE user_id = ?',
+      [userId]
+    );
+    const tasksRow = await db.get(
+      'SELECT COUNT(*) AS count FROM tasks WHERE user_id = ?',
+      [userId]
+    );
+    const completedTasksRow = await db.get(
+      'SELECT COUNT(*) AS count FROM tasks WHERE user_id = ? AND completed = 1',
       [userId]
     );
 
-    const stats = result.rows[0];
+    const stats = {
+      savedIdeas: savedIdeasRow ? savedIdeasRow.count : 0,
+      tasks: tasksRow ? tasksRow.count : 0,
+      completedTasks: completedTasksRow ? completedTasksRow.count : 0
+    };
+
     stats.progress =
       stats.tasks === 0
         ? 0

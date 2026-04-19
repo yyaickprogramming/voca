@@ -6,8 +6,8 @@ const router = express.Router();
 
 router.get('/random', authMiddleware, async (req, res) => {
   try {
-    const result = await db.query('SELECT * FROM ideas ORDER BY RANDOM() LIMIT 1');
-    res.json(result.rows[0]);
+    const idea = await db.get('SELECT * FROM ideas ORDER BY RANDOM() LIMIT 1');
+    res.json(idea);
   } catch (error) {
     res.status(500).json({ message: 'Ошибка сервера' });
   }
@@ -18,14 +18,14 @@ router.post('/save', authMiddleware, async (req, res) => {
   const userId = req.session.userId;
 
   try {
-    await db.query(
-      'INSERT INTO user_ideas (user_id, idea_id) VALUES ($1, $2)',
+    await db.run(
+      'INSERT INTO user_ideas (user_id, idea_id) VALUES (?, ?)',
       [userId, ideaId]
     );
 
     res.json({ message: 'Идея сохранена' });
   } catch (error) {
-    if (error.code === '23505') {
+    if (error.message && error.message.includes('idx_user_ideas_unique')) {
       return res.status(409).json({ message: 'Эта идея уже есть в ваших сохраненных' });
     }
 
@@ -38,12 +38,12 @@ router.post('/remove', authMiddleware, async (req, res) => {
   const userId = req.session.userId;
 
   try {
-    const result = await db.query(
-      'DELETE FROM user_ideas WHERE user_id = $1 AND idea_id = $2',
+    const result = await db.run(
+      'DELETE FROM user_ideas WHERE user_id = ? AND idea_id = ?',
       [userId, ideaId]
     );
 
-    if (result.rowCount === 0) {
+    if (result.changes === 0) {
       return res.status(404).json({ message: 'Идея не найдена в сохраненных' });
     }
 
@@ -57,18 +57,18 @@ router.get('/my', authMiddleware, async (req, res) => {
   const userId = req.session.userId;
 
   try {
-    const result = await db.query(
+    const ideas = await db.all(
       `
         SELECT ideas.*, user_ideas.is_main
         FROM user_ideas
         JOIN ideas ON ideas.id = user_ideas.idea_id
-        WHERE user_ideas.user_id = $1
+        WHERE user_ideas.user_id = ?
         ORDER BY user_ideas.is_main DESC, ideas.title ASC
       `,
       [userId]
     );
 
-    res.json(result.rows);
+    res.json(ideas);
   } catch (error) {
     res.status(500).json({ message: 'Ошибка сервера' });
   }
@@ -77,29 +77,30 @@ router.get('/my', authMiddleware, async (req, res) => {
 router.post('/set-main', authMiddleware, async (req, res) => {
   const { ideaId } = req.body;
   const userId = req.session.userId;
-  const client = await db.getClient();
 
   try {
-    await client.query('BEGIN');
-    await client.query('UPDATE user_ideas SET is_main = FALSE WHERE user_id = $1', [userId]);
+    await db.transaction(async (tx) => {
+      await tx.run('UPDATE user_ideas SET is_main = 0 WHERE user_id = ?', [userId]);
 
-    const result = await client.query(
-      'UPDATE user_ideas SET is_main = TRUE WHERE user_id = $1 AND idea_id = $2 RETURNING id',
-      [userId, ideaId]
-    );
+      const result = await tx.run(
+        'UPDATE user_ideas SET is_main = 1 WHERE user_id = ? AND idea_id = ?',
+        [userId, ideaId]
+      );
 
-    if (result.rowCount === 0) {
-      await client.query('ROLLBACK');
+      if (result.changes === 0) {
+        const error = new Error('NOT_FOUND');
+        error.code = 'NOT_FOUND';
+        throw error;
+      }
+    });
+
+    res.json({ message: 'Основная идея выбрана' });
+  } catch (error) {
+    if (error.code === 'NOT_FOUND') {
       return res.status(404).json({ message: 'Идея не найдена в сохраненных' });
     }
 
-    await client.query('COMMIT');
-    res.json({ message: 'Основная идея выбрана' });
-  } catch (error) {
-    await client.query('ROLLBACK');
     res.status(500).json({ message: 'Ошибка сервера' });
-  } finally {
-    client.release();
   }
 });
 
