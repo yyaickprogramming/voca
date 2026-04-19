@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Voca | Вход</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="auth-pending" data-guest-only>
+  <header class="navbar">
+    <div class="navbar-inner">
+      <a class="logo" href="/index.html">Voca</a>
+      <nav class="nav-links">
+        <a href="/index.html">Главная</a>
+        <a data-guest-only href="/register.html">Регистрация</a>
+        <a class="active" data-guest-only href="/login.html">Вход</a>
+        <a data-auth-only hidden href="/ideas.html">Идеи</a>
+        <a data-auth-only hidden href="/tasks.html">Задачи</a>
+        <a data-auth-only hidden href="/profile.html">Профиль</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="card auth-card fade-in">
+      <div class="feature-icon">🔐</div>
+      <h1 class="page-title">Вход в аккаунт</h1>
+      <p class="page-subtitle">Войдите в систему, чтобы работать со своими идеями, задачами и статистикой.</p>
+
+      <div class="soft-divider"></div>
+
+      <div class="input-group">
+        <label for="username">Логин</label>
+        <input type="text" id="username" placeholder="Введите логин" />
+      </div>
+
+      <div class="input-group">
+        <label for="password">Пароль</label>
+        <input type="password" id="password" placeholder="Введите пароль" />
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-primary" onclick="login()">Войти</button>
+      </div>
+
+      <p class="small-text">Нет аккаунта? <a href="/register.html" style="color:#2563eb;">Зарегистрироваться</a></p>
+
+    </div>
+  </main>
+
+  <script src="/script.js"></script>
+  <script>
+    async function login() {
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        showToast('Вы успешно вошли в аккаунт.', 'success');
+        setTimeout(() => {
+          window.location.href = '/index.html';
+        }, 900);
+        return;
+      }
+
+      showToast(data.message, 'error');
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Voca | Идеи</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="auth-pending" data-requires-auth data-auth-reason="auth">
+  <header class="navbar">
+    <div class="navbar-inner">
+      <a class="logo" href="/index.html">Voca</a>
+      <nav class="nav-links">
+        <a href="/index.html">Главная</a>
+        <a data-guest-only href="/register.html">Регистрация</a>
+        <a data-guest-only href="/login.html">Вход</a>
+        <a class="active" data-auth-only hidden href="/ideas.html">Идеи</a>
+        <a data-auth-only hidden href="/tasks.html">Задачи</a>
+        <a data-auth-only hidden href="/profile.html">Профиль</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="page-header fade-in">
+      <div>
+        <h1 class="page-title">Стартап-идеи</h1>
+        <p class="page-subtitle">Генерируйте идеи, сохраняйте интересные варианты и выбирайте одну основную идею для дальнейшей реализации.</p>
+      </div>
+
+      <div class="page-chip" id="ideasCounter">Сохранено: 0</div>
+    </div>
+
+    <div class="info-banner fade-in-slow">
+      <div>
+        <h2>Генерация и сохранение идей</h2>
+        <p>Выберите случайную идею из базы, изучите её характеристики и сохраните лучший вариант в свой аккаунт.</p>
+      </div>
+
+      <div class="actions-row">
+        <button class="btn btn-primary" onclick="getIdea()">Сгенерировать</button>
+        <button class="btn btn-secondary" onclick="saveIdea()">Сохранить</button>
+        <button class="btn btn-secondary" onclick="loadIdeas()">Мои идеи</button>
+      </div>
+    </div>
+
+    <div id="idea">
+      <div class="idea-placeholder fade-in">
+        <div class="idea-placeholder-icon">✨</div>
+        <h3>Здесь появится следующая идея</h3>
+        <p>Нажмите «Сгенерировать», чтобы получить новую стартап-концепцию с питчем, объяснением перспективности и первыми шагами.</p>
+      </div>
+    </div>
+
+    <section class="section fade-in-slow">
+      <h2 class="section-title">Мои идеи</h2>
+      <p class="section-subtitle">Здесь собраны идеи, которые вы сохранили в своем аккаунте для дальнейшей работы.</p>
+      <div id="myIdeas" class="list"></div>
+    </section>
+  </main>
+
+  <script src="/script.js"></script>
+  <script>
+    let currentIdeaId = null;
+    let savedIdeaIds = new Set();
+
+    async function getIdea() {
+      const res = await fetch('/api/ideas/random');
+      const idea = await res.json();
+
+      if (!idea || idea.message) {
+        document.getElementById('idea').innerHTML =
+          `<div class="message message-error">${idea.message || 'Ошибка загрузки идеи'}</div>`;
+        return;
+      }
+
+      currentIdeaId = idea.id;
+
+      document.getElementById('idea').innerHTML = `
+        <div class="idea-card fade-in">
+          <div class="card-title-row">
+            <h3>💡 ${idea.title}</h3>
+            <span class="badge">Случайная идея</span>
+          </div>
+
+          <p class="idea-description">${idea.description}</p>
+
+          <div class="idea-story">
+            <div class="story-card">
+              <strong>Краткий питч</strong>
+              <p>${idea.pitch}</p>
+            </div>
+
+            <div class="story-card">
+              <strong>Почему идея перспективна</strong>
+              <p>${idea.why_now}</p>
+            </div>
+
+            <div class="story-card">
+              <strong>С чего начать</strong>
+              <p>${idea.first_steps}</p>
+            </div>
+          </div>
+
+          <div class="idea-meta">
+            <div><strong>Целевая аудитория</strong>${idea.audience}</div>
+            <div><strong>Риски</strong>${idea.risks}</div>
+            <div><strong>Доходность</strong>${idea.income}</div>
+            <div><strong>Затратность</strong>${idea.cost}</div>
+            <div><strong>Сложность реализации</strong>${idea.difficulty}</div>
+            <div><strong>Актуальность</strong>${idea.relevance}</div>
+          </div>
+        </div>
+      `;
+    }
+
+    async function saveIdea() {
+      if (!currentIdeaId) {
+        showToast('Сначала сгенерируйте идею.', 'warning');
+        return;
+      }
+
+      if (savedIdeaIds.has(currentIdeaId)) {
+        showToast('Эта идея уже есть в ваших сохраненных.', 'info');
+        return;
+      }
+
+      const res = await fetch('/api/ideas/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ideaId: currentIdeaId })
+      });
+
+      const data = await res.json();
+      showToast(data.message, res.ok ? 'success' : 'error');
+
+      if (res.ok) {
+        loadIdeas();
+      }
+    }
+
+    async function loadIdeas() {
+      const res = await fetch('/api/ideas/my');
+      const ideas = await res.json();
+
+      savedIdeaIds = new Set(Array.isArray(ideas) ? ideas.map((idea) => idea.id) : []);
+      document.getElementById('ideasCounter').textContent = `Сохранено: ${savedIdeaIds.size}`;
+
+      if (!Array.isArray(ideas) || ideas.length === 0) {
+        document.getElementById('myIdeas').innerHTML =
+          `<p class="empty-text">У вас пока нет сохраненных идей.</p>`;
+        return;
+      }
+
+      document.getElementById('myIdeas').innerHTML = ideas.map(i => `
+        <div class="list-item ${i.is_main ? 'main-idea-card' : ''}">
+          <div class="list-item-top">
+            <h4>${i.title}</h4>
+            ${i.is_main ? '<span class="badge">Основная идея</span>' : '<span class="badge badge-warning">Сохранена</span>'}
+          </div>
+          <p>${i.description}</p>
+          <p class="idea-saved-note"><strong>Почему это интересно:</strong> ${i.why_now}</p>
+          <div class="idea-actions">
+            <button class="btn btn-secondary" onclick="setMain(${i.id})">Сделать основной</button>
+            <button class="btn btn-danger" onclick="removeIdea(${i.id})">Удалить</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function setMain(id) {
+      const response = await fetch('/api/ideas/set-main', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ideaId: id })
+      });
+
+      const data = await response.json();
+      showToast(data.message, response.ok ? 'success' : 'error');
+      loadIdeas();
+    }
+
+    async function removeIdea(id) {
+      const response = await fetch('/api/ideas/remove', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ideaId: id })
+      });
+
+      const data = await response.json();
+      showToast(data.message, response.ok ? 'success' : 'error');
+
+      if (currentIdeaId === id && response.ok) {
+        savedIdeaIds.delete(id);
+      }
+
+      loadIdeas();
+    }
+
+    async function initIdeasPage() {
+      const user = await window.authStatePromise;
+
+      if (!user) {
+        return;
+      }
+
+      loadIdeas();
+    }
+
+    initIdeasPage();
+  </script>
+</body>
+</html>

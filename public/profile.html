@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Voca | Профиль</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="auth-pending" data-requires-auth data-auth-reason="auth">
+  <header class="navbar">
+    <div class="navbar-inner">
+      <a class="logo" href="/index.html">Voca</a>
+      <nav class="nav-links">
+        <a href="/index.html">Главная</a>
+        <a data-guest-only href="/register.html">Регистрация</a>
+        <a data-guest-only href="/login.html">Вход</a>
+        <a data-auth-only hidden href="/ideas.html">Идеи</a>
+        <a data-auth-only hidden href="/tasks.html">Задачи</a>
+        <a class="active" data-auth-only hidden href="/profile.html">Профиль</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="page-header fade-in">
+      <div>
+        <h1 class="page-title">Профиль пользователя</h1>
+        <p class="page-subtitle">Здесь собраны ваши основные данные, текущий прогресс и личная статистика по работе с идеями.</p>
+      </div>
+
+      <div class="page-chip">Личный кабинет</div>
+    </div>
+
+    <div class="card highlight-card profile-card">
+      <div class="profile-summary">
+        <img class="profile-avatar" src="/avatar-default.svg" alt="Аватар пользователя" />
+
+        <div class="profile-main">
+          <div class="profile-kicker">Аккаунт Voca</div>
+          <h2 id="profileName" class="profile-name">Пользователь</h2>
+          <p id="profileSubtitle" class="profile-subtitle">Загрузка данных профиля...</p>
+        </div>
+      </div>
+
+      <div class="actions-row">
+        <button class="btn btn-secondary" onclick="logout()">Выйти</button>
+      </div>
+
+      <div class="mini-stat-row">
+        <div class="mini-stat">
+          <span>Статус</span>
+          <strong id="profileStatus">Активен</strong>
+        </div>
+        <div class="mini-stat">
+          <span>ID</span>
+          <strong id="profileId">-</strong>
+        </div>
+      </div>
+    </div>
+
+    <section class="section">
+      <h2 class="section-title">Статистика</h2>
+      <p class="section-subtitle">Короткий срез по вашему текущему движению: сколько идей сохранено, сколько задач заведено и как идет выполнение.</p>
+      <div id="stats" class="stats-grid"></div>
+      <div id="progressCard"></div>
+    </section>
+  </main>
+
+  <script src="/script.js"></script>
+  <script>
+    async function loadProfile() {
+      const res = await fetch('/api/auth/me');
+      const data = await res.json();
+
+      if (data.username) {
+        document.getElementById('profileName').textContent = data.username;
+        document.getElementById('profileSubtitle').textContent =
+          'Ваш аккаунт готов к работе с идеями, задачами и статистикой.';
+        document.getElementById('profileId').textContent = data.id;
+      }
+    }
+
+    async function loadStats() {
+      const res = await fetch('/api/stats');
+      const data = await res.json();
+
+      document.getElementById('stats').innerHTML = `
+        <div class="stat-box">
+          <h3>Мои идеи</h3>
+          <p>${data.savedIdeas}</p>
+        </div>
+        <div class="stat-box">
+          <h3>Всего задач</h3>
+          <p>${data.tasks}</p>
+        </div>
+        <div class="stat-box">
+          <h3>Выполненные задачи</h3>
+          <p>${data.completedTasks}</p>
+        </div>
+        <div class="stat-box">
+          <h3>Общий прогресс</h3>
+          <p>${data.progress}%</p>
+        </div>
+      `;
+
+      document.getElementById('progressCard').innerHTML = `
+        <div class="progress-card">
+          <div class="progress-top">
+            <div class="progress-title">Прогресс по задачам</div>
+            <div class="progress-value">${data.progress}%</div>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" style="width: ${data.progress}%"></div>
+          </div>
+        </div>
+      `;
+    }
+
+    async function logout() {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      showToast('Вы вышли из аккаунта.', 'success');
+      setTimeout(() => {
+        window.location.href = '/index.html';
+      }, 900);
+    }
+
+    async function initProfilePage() {
+      const user = await window.authStatePromise;
+
+      if (!user) {
+        return;
+      }
+
+      loadProfile();
+      loadStats();
+    }
+
+    initProfilePage();
+  </script>
+</body>
+</html>

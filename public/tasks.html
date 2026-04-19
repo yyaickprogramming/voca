@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Voca | Задачи</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="auth-pending" data-requires-auth data-auth-reason="auth">
+  <header class="navbar">
+    <div class="navbar-inner">
+      <a class="logo" href="/index.html">Voca</a>
+      <nav class="nav-links">
+        <a href="/index.html">Главная</a>
+        <a data-guest-only href="/register.html">Регистрация</a>
+        <a data-guest-only href="/login.html">Вход</a>
+        <a data-auth-only hidden href="/ideas.html">Идеи</a>
+        <a class="active" data-auth-only hidden href="/tasks.html">Задачи</a>
+        <a data-auth-only hidden href="/profile.html">Профиль</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="page-header fade-in">
+      <div>
+        <h1 class="page-title">План задач</h1>
+        <p class="page-subtitle">Разбивайте работу над проектом на понятные шаги и отмечайте выполнение задач по мере продвижения.</p>
+      </div>
+    </div>
+
+    <div class="card fade-in">
+      <div class="feature-icon">✅</div>
+
+      <div class="input-group">
+        <label for="taskInput">Новая задача</label>
+        <input type="text" id="taskInput" placeholder="Например: провести анализ конкурентов" />
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-primary" onclick="createTask()">Добавить задачу</button>
+      </div>
+    </div>
+
+    <section class="section fade-in-slow">
+      <h2 class="section-title">Список задач</h2>
+      <p class="section-subtitle">Все задачи привязаны к аккаунту пользователя и доступны только после авторизации.</p>
+      <div id="tasks" class="list"></div>
+    </section>
+  </main>
+
+  <script src="/script.js"></script>
+  <script>
+    async function loadTasks() {
+      const res = await fetch('/api/tasks');
+      const tasks = await res.json();
+
+      if (!Array.isArray(tasks) || tasks.length === 0) {
+        document.getElementById('tasks').innerHTML =
+          `<p class="empty-text">У вас пока нет задач.</p>`;
+        return;
+      }
+
+      document.getElementById('tasks').innerHTML = tasks.map(t => `
+        <div class="list-item">
+          <div class="list-item-top">
+            <span class="task-text ${t.completed ? 'done' : ''}">${t.text}</span>
+            ${t.completed
+              ? '<span class="badge badge-success">Выполнено</span>'
+              : '<span class="badge badge-warning">В работе</span>'}
+          </div>
+
+          <div class="task-actions">
+            <button class="btn btn-secondary" onclick="toggleTask(${t.id})">Изменить статус</button>
+            <button class="btn btn-danger" onclick="deleteTask(${t.id})">Удалить</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function createTask() {
+      const text = document.getElementById('taskInput').value.trim();
+
+      if (!text) {
+        showToast('Введите текст задачи.', 'warning');
+        return;
+      }
+
+      const res = await fetch('/api/tasks/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text })
+      });
+
+      const data = await res.json();
+      showToast(data.message, res.ok ? 'success' : 'error');
+
+      if (!res.ok) {
+        return;
+      }
+
+      document.getElementById('taskInput').value = '';
+      loadTasks();
+    }
+
+    async function deleteTask(id) {
+      const res = await fetch('/api/tasks/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      });
+
+      const data = await res.json();
+      showToast(data.message, res.ok ? 'success' : 'error');
+      loadTasks();
+    }
+
+    async function toggleTask(id) {
+      const res = await fetch('/api/tasks/toggle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      });
+
+      const data = await res.json();
+      showToast(data.message, res.ok ? 'success' : 'error');
+      loadTasks();
+    }
+
+    async function initTasksPage() {
+      const user = await window.authStatePromise;
+
+      if (!user) {
+        return;
+      }
+
+      loadTasks();
+    }
+
+    initTasksPage();
+  </script>
+</body>
+</html>

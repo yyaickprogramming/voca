@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Voca помогает генерировать идеи для стартапов и SaaS, сохранять лучшие варианты и превращать их в план действий." />
+  <meta property="og:title" content="Voca" />
+  <meta property="og:description" content="Генератор идей для стартапов и SaaS-проектов с личным кабинетом, задачами и прогрессом." />
+  <meta property="og:type" content="website" />
+  <title>Voca</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="auth-pending">
+  <header class="navbar">
+    <div class="navbar-inner">
+      <a class="logo" href="/index.html">Voca</a>
+      <nav class="nav-links">
+        <a class="active" href="/index.html">Главная</a>
+        <a data-guest-only href="/register.html">Регистрация</a>
+        <a data-guest-only href="/login.html">Вход</a>
+        <a data-auth-only hidden href="/ideas.html">Идеи</a>
+        <a data-auth-only hidden href="/tasks.html">Задачи</a>
+        <a data-auth-only hidden href="/profile.html">Профиль</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="hero fade-in">
+      <div class="hero-box">
+        <div class="hero-badges">
+          <span class="hero-badge">💡 Генерация идей</span>
+          <span class="hero-badge">📊 Анализ</span>
+          <span class="hero-badge">✅ Планирование</span>
+        </div>
+
+        <h1>Генератор и планировщик стартап-идей</h1>
+        <p>
+          Веб-сервис помогает генерировать идеи для стартапов, анализировать их,
+          сохранять лучшие варианты и планировать реализацию через личный список задач.
+        </p>
+
+        <div class="hero-metrics">
+          <div class="hero-metric">
+            <strong>100+</strong>
+            <span>готовых идей в базе</span>
+          </div>
+          <div class="hero-metric">
+            <strong>3 шага</strong>
+            <span>от идеи до плана</span>
+          </div>
+          <div class="hero-metric">
+            <strong>1 кабинет</strong>
+            <span>идеи, задачи и прогресс</span>
+          </div>
+        </div>
+
+        <div class="hero-buttons">
+          <a class="btn btn-primary" data-guest-only href="/login.html">Войти в аккаунт</a>
+          <a class="btn btn-primary" data-auth-only hidden href="/ideas.html">Перейти к идеям</a>
+          <a class="btn btn-light" data-guest-only href="/register.html">Создать аккаунт</a>
+          <a class="btn btn-light" data-auth-only hidden href="/profile.html">Открыть профиль</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="section grid grid-3 fade-in-slow">
+      <div class="card glow-card feature-card">
+        <div class="feature-icon">💡</div>
+        <h3>Генерация идей</h3>
+        <p>Сервис выбирает случайную идею из базы и показывает её в удобной карточке с параметрами.</p>
+      </div>
+
+      <div class="card glow-card feature-card">
+        <div class="feature-icon">📈</div>
+        <h3>Анализ идеи</h3>
+        <p>Показываются описание, аудитория, риски, доходность, затратность, сложность и актуальность.</p>
+      </div>
+
+      <div class="card glow-card feature-card">
+        <div class="feature-icon">👤</div>
+        <h3>Личный кабинет</h3>
+        <p>Пользователь может зарегистрироваться, войти, сохранить идеи и выбрать одну основную.</p>
+      </div>
+
+      <div class="card glow-card feature-card">
+        <div class="feature-icon">🗂️</div>
+        <h3>План задач</h3>
+        <p>Встроенный To-do лист помогает разбить проект на этапы и отслеживать выполнение задач.</p>
+      </div>
+
+      <div class="card glow-card feature-card">
+        <div class="feature-icon">🎯</div>
+        <h3>Фокус на SaaS</h3>
+        <p>Идеи подходят для цифровых сервисов, онлайн-продуктов и современных стартапов с понятной бизнес-моделью.</p>
+      </div>
+
+      <div class="card glow-card feature-card">
+        <div class="feature-icon">🚀</div>
+        <h3>Быстрый старт</h3>
+        <p>После входа можно сразу генерировать идеи, сохранять интересные варианты и превращать их в реальные шаги.</p>
+      </div>
+    </section>
+
+    <section class="section product-flow fade-in-slow">
+      <div class="flow-intro">
+        <h2 class="section-title">Как работает Voca</h2>
+        <p class="section-subtitle">Сервис не просто показывает случайную идею, а помогает пройти короткий путь от вдохновения до понятного плана действий.</p>
+      </div>
+
+      <div class="flow-grid">
+        <div class="flow-step">
+          <span class="flow-step-number">1</span>
+          <h3>Найти идею</h3>
+          <p>Сгенерируйте стартап-идею с описанием, кратким питчем и пояснением, почему она может выстрелить.</p>
+        </div>
+
+        <div class="flow-step">
+          <span class="flow-step-number">2</span>
+          <h3>Отобрать лучшее</h3>
+          <p>Сохраняйте сильные варианты в свой кабинет и выделяйте одну основную идею для дальнейшей работы.</p>
+        </div>
+
+        <div class="flow-step">
+          <span class="flow-step-number">3</span>
+          <h3>Собрать план</h3>
+          <p>Переведите идею в задачи, отслеживайте прогресс и постепенно формируйте рабочую дорожную карту.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    Voca
+  </footer>
+
+  <script src="/script.js"></script>
+</body>
+</html>
