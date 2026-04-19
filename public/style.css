@@ -947,6 +947,10 @@ input:focus {
 }
 
 @media (max-width: 700px) {
+  .navbar {
+    position: static;
+  }
+
   .hero h1 {
     font-size: 34px;
   }
@@ -966,7 +970,7 @@ input:focus {
   }
 
   .toast-container {
-    top: 84px;
+    top: 16px;
     right: 16px;
     left: 16px;
     width: auto;
@@ -1188,7 +1192,7 @@ input:focus {
   }
 
   .toast-container {
-    top: 78px;
+    top: 16px;
   }
 
   .hero-metrics {
